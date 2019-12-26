@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>php-jquery-ajax-handling-conception</title>
+        <style>
+            #actions {
+                width:100%;
+                text-align: center;
+            }
+            .inner {
+                display: inline-block;
+            }
+            #request-msg-container {
+                position: absolute;
+                left: 50%;
+                top: 20%;
+                transform: translate(-50%, -50%);
+                -ms-transform: translate(-50%, -50%); /* for IE 9 */
+                -webkit-transform: translate(-50%, -50%); /* for Safari */
+            }
+        </style>
+        <script src="https://code.jquery.com/jquery-latest.min.js"></script>
+    </head>
+    <body>
+        
+        <div id="actions">
+            <div>Click on buttons below to trigger AJAX call.</div>
+            <br>
+            <div class="inner"><button data-id="0">Server Exception</button></div>
+            <div class="inner"><button data-id="1">AJAX Failure</button></div>
+            <div class="inner"><button data-id="2">Success</button></div>
+        </div>
+        <div id="request-msg-container"><pre></pre></div>
+        <script>
+            !function () {
+                $('.inner').click(function (e) {
+                    triggerAjaxCall($(e.target).attr('data-id'));
+                });
+                
+                function triggerAjaxCall (client_data) {
+                    let msgText,
+                        msgContainer = $('#request-msg-container pre'),
+                        // URL is changed to 'wrong-url' only to show .fail() handler working.
+                        url = (client_data == 1)
+                            ? 'wrong-url'
+                            : 'index.php';
+                            
+                    msgContainer.html('');
+                    
+                    $.ajax({
+                        'type': 'POST',
+                        'url': url,
+                        'data': {
+                            'client_data' : client_data,
+                        },
+                    }).done(function (res) {
+                        let data, statusCode;
+
+                        try {
+                            data = JSON.parse(res);
+
+                            if ($.isPlainObject(data) || $.isArray(data)) { // Should be object (or arr).
+                                statusCode = data[0];
+
+                                if (statusCode == 200) { // If success.
+                                    
+                                    // DO YOUR SUCCESS LOGIC HERE!!!
+                                    
+                                    let requestedData = JSON.parse(data[1]);
+                                    for (let keys in requestedData){
+                                        msgContainer
+                                            .css('color', 'green')
+                                            .append('<div>' + requestedData[keys] + '</div>');
+                                    }
+
+                                } else { // Status code != 200.
+                                    throw new TypeError(data[1]);
+                                }
+
+                            // Data is parsable, but it is not an obj/arr, as planned (for ex., '"foo"', 'true', 'null').
+                            } else {
+                                throw new TypeError(data);
+                            }
+
+                        } catch (e) {
+                            // SyntaxError exc throws, if res is unparsable (JSON.parse() failed): 
+                            // unhandled exception is thrown, which isn't related to validation (for ex., UnknownPropertyException).
+                            msgText = (e.name == 'SyntaxError') ? res : e.message;
+
+                            // DO ERROR LOGIC HERE (IF NEEDED).
+                            
+                            msgContainer
+                                .css('color', 'red')
+                                .html(msgText);
+                        }
+
+                    }).fail(function (jqXHR, textStatus, errorThrown) {
+                        msgText = errorThrown;
+
+                        // DO ERROR LOGIC OR COPY IT FROM PREVIOUS CATCH STATEMENT (IF NEEDED).
+                        
+                        msgContainer
+                            .css('color', 'red')
+                            .html(msgText);
+
+                    }).always(function () { // Always triggers - in done() and fail() case as well.
+
+                        // DO LOGIC, WHICH SHOULD BE PRESENT ANYWAY - IF AJAX IS SUCCESSFUL OR FAILED (IF NEEDED).
+                        
+                        msgContainer
+                            .append('<div style="color: blue;">I always trigger.</div>');
+                    });
+                }
+            }();
+        </script>
+    </body>
+</html>
